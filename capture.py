@@ -1,15 +1,16 @@
 import time
 import numpy as np
-
+from dataclasses import dataclass
 import cv2
+import analytics
 
 def camera_capture() -> np.array:
     cam = cv2.VideoCapture(cv2.CAP_DSHOW)
     _, image = cam.read()
     return image
 
-# Kmeans 
 def kmeans_color_quantization(image, clusters=8, rounds=1):
+    # get color means (kmeans) for shapes
     h, w = image.shape[:2]
     samples = np.zeros([h*w,3], dtype=np.float32)
     count = 0
@@ -43,6 +44,7 @@ def find_contours(threshold_image: np.array):
     return centers
 
 def draw_boxes(image: np.array, centers: list):
+    # add box overlay to highlight specific particles
     for c in centers:
         rect = cv2.minAreaRect(c)
         box = np.intp(cv2.boxPoints(rect))
@@ -59,7 +61,7 @@ def gather_points(centers: list, threshold: int=2):
     for c in centers:
         area = cv2.contourArea(c)
         if area < AREA_THRESHOLD:
-            cv2.drawContours(thresh, [c], -1, 0, -1)
+            cv2.drawContours(threshold, [c], -1, 0, -1)
         else:
             (x, y), radius = cv2.minEnclosingCircle(c)
             points_list.append((int(x), int(y)))
@@ -72,31 +74,50 @@ def image_overlay(image: np.array, threshold_image: np.array):
     image[threshold_image==255] = (36,255,12)
     return image
 
-# Load image
-image = cv2.imread('particles.jpg')
-original = image.copy()
+@dataclass
+class CoffeeAnalyzer:
+    image: np.array
+    thresh: np.array
+    original: np.array
+    points_list: np.array
+    size_list: np.array
 
-kmeans, gray, thresh = apply_thresholding(image)
-centers = find_contours(threshold_image=thresh)
-rectangles = draw_boxes(image.copy(), centers)
-points_list, size_list = gather_points(centers)
-overlay = image_overlay(image.copy(), threshold_image=thresh)
+    def __init__(self, image_path: str):
+        self.image = cv2.imread(image_path)
+        self.original = self.image.copy()
+
+    def _analyze(self):    
+        kmeans, gray, thresh = apply_thresholding(self.image)
+        centers = find_contours(threshold_image=thresh)
+        rectangles = draw_boxes(self.image.copy(), centers)
+        points_list, size_list = gather_points(centers)
+        overlay = image_overlay(self.image.copy(), threshold_image=thresh)
+
+        self.rectangles = rectangles
+        self.overlay = overlay
+        self.points_list = points_list
+        self.size_list = size_list
+
+    def _display(self):
+
+        fontScale = 1
+        thickness = 3
+        
+        # Using cv2.putText() method 
+        self.overlay = cv2.putText(self.overlay, "Number of particles: {}".format(len(self.points_list)), (50, 50), cv2.FONT_HERSHEY_SIMPLEX , fontScale, (255, 0, 0) , thickness, cv2.LINE_AA)
+        self.overlay = cv2.putText(self.overlay, "Average particle size: {:.3f}".format(sum(self.size_list)/len(self.size_list)), (50, 100), cv2.FONT_HERSHEY_SIMPLEX , fontScale, (255, 0, 0) , thickness, cv2.LINE_AA)
+
+        cv2.imshow('original', self.original)
+        cv2.imshow('overlay', self.overlay)
+        cv2.imshow('rects', self.rectangles)
+        cv2.waitKey()
+
+    def display_data(self):
+        points = analytics.points_to_dataframe(self.points_list, self.size_list)
 
 
-print("Number of particles: {}".format(len(points_list)))
-print("Average particle size: {:.3f}".format(sum(size_list)/len(size_list)))
+if __name__ == "__main__":
 
-fontScale = 1
-thickness = 3
-   
-# Using cv2.putText() method 
-overlay = cv2.putText(overlay, "Number of particles: {}".format(len(points_list)), (50, 50), cv2.FONT_HERSHEY_SIMPLEX , fontScale, (255, 0, 0) , thickness, cv2.LINE_AA)
-overlay = cv2.putText(overlay, "Average particle size: {:.3f}".format(sum(size_list)/len(size_list)), (50, 100), cv2.FONT_HERSHEY_SIMPLEX , fontScale, (255, 0, 0) , thickness, cv2.LINE_AA)
-
-
-# Display
-cv2.imshow('original', original)
-cv2.imshow('overlay', overlay)
-cv2.imshow('rects', rectangles)
-#cv2.imshow('result', result)
-cv2.waitKey()
+    ca = CoffeeAnalyzer("particles.jpg")
+    ca._analyze()
+    ca._display()
