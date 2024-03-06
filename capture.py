@@ -107,9 +107,9 @@ class CoffeeAnalyzer:
         self.overlay = cv2.putText(self.overlay, "Number of particles: {}".format(len(self.points_list)), (50, 50), cv2.FONT_HERSHEY_SIMPLEX , fontScale, (255, 0, 0) , thickness, cv2.LINE_AA)
         self.overlay = cv2.putText(self.overlay, "Average particle size: {:.3f}".format(sum(self.size_list)/len(self.size_list)), (50, 100), cv2.FONT_HERSHEY_SIMPLEX , fontScale, (255, 0, 0) , thickness, cv2.LINE_AA)
 
-        cv2.imshow('original', cv2.resize(self.original, (1200, 1200)))
-        cv2.imshow('overlay', cv2.resize(self.overlay, (1200, 1200)))
-        cv2.imshow('rects', cv2.resize(self.rectangles, (1200, 1200)))
+        cv2.imshow('original', cv2.resize(self.original, (1600, 1600)))
+        cv2.imshow('overlay', cv2.resize(self.overlay, (1600, 1600)))
+        cv2.imshow('rects', cv2.resize(self.rectangles, (1600, 1600)))
         cv2.waitKey()
 
     def display_data(self):
